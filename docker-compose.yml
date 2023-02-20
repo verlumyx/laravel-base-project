@@ -1,0 +1,54 @@
+version: '3.7'
+services:
+    composer:
+        image: composer:2.3.9
+        container_name: plenitud_aa_composer
+        volumes:
+            - ./:/app
+        depends_on:
+            - app
+        networks:
+            - plenitud_aa_network
+        command: "composer install"
+
+    mariadb:
+        image: mariadb:10.8.3-jammy
+        container_name: plenitud_aa_mariadb
+        restart: always
+        environment:
+            MARIADB_USER: ${DB_USERNAME}
+            MARIADB_PASSWORD: ${DB_PASSWORD}
+            MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
+            MARIADB_DATABASE: ${DB_DATABASE}
+        ports:
+            - '${FORWARD_DB_PORT:-3306}:3306'
+        networks:
+            - plenitud_aa_network
+        volumes:
+            - plenitud_aa_mariadb-data:/var/lib/mysql
+            - plenitud_aa_mariadb-config:/etc/mysql
+
+    app:
+        build:
+            context: .
+            dockerfile: ./docker/Dockerfile
+            args:
+                user: developer
+                uid: 1000
+        container_name: plenitud
+        ports:
+            - 8080:8000
+        volumes:
+            - ./:/var/www/html
+        networks:
+            - plenitud_aa_network
+        depends_on:
+            - mariadb
+        command: "php artisan serve --host=0.0.0.0"
+
+networks:
+    plenitud_aa_network:
+
+volumes:
+    plenitud_aa_mariadb-data:
+    plenitud_aa_mariadb-config:
